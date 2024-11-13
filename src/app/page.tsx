@@ -1,101 +1,245 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
+import { Search, Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+
+type Priority = "low" | "medium" | "high";
+
+interface Task {
+  id: string;
+  title: string;
+  description: string;
+  completed: boolean;
+  priority: Priority;
+}
+
+export default function TodoApp() {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [newTask, setNewTask] = useState("");
+  const [newTaskDescription, setNewTaskDescription] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortCriteria, setSortCriteria] = useState<
+    "priority" | "alphabetical" | "completion"
+  >("priority");
+  const [expandedTask, setExpandedTask] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedTasks = localStorage.getItem("tasks");
+      if (savedTasks) {
+        setTasks(JSON.parse(savedTasks));
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("tasks", JSON.stringify(tasks));
+    }
+  }, [tasks]);
+
+  const addTask = useCallback(() => {
+    if (newTask.trim()) {
+      setTasks((prevTasks) => [
+        ...prevTasks,
+        {
+          id: Date.now().toString(),
+          title: newTask.trim(),
+          description: newTaskDescription.trim(),
+          completed: false,
+          priority: "medium",
+        },
+      ]);
+      setNewTask("");
+      setNewTaskDescription("");
+    }
+  }, [newTask, newTaskDescription]);
+
+  const deleteTask = useCallback((id: string) => {
+    setTasks((prevTasks) => prevTasks.filter((task) => task.id !== id));
+  }, []);
+
+  const toggleTaskCompletion = useCallback((id: string) => {
+    setTasks((prevTasks) =>
+      prevTasks.map((task) =>
+        task.id === id ? { ...task, completed: !task.completed } : task
+      )
+    );
+  }, []);
+
+  const updateTaskPriority = useCallback((id: string, priority: Priority) => {
+    setTasks((prevTasks) =>
+      prevTasks.map((task) => (task.id === id ? { ...task, priority } : task))
+    );
+  }, []);
+
+  const toggleExpandTask = useCallback((id: string) => {
+    setExpandedTask((prevId) => (prevId === id ? null : id));
+  }, []);
+
+  const filteredAndSortedTasks = useMemo(() => {
+    return tasks
+      .filter((task) =>
+        task.title.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      .sort((a, b) => {
+        if (sortCriteria === "priority") {
+          const priorityOrder = { high: 3, medium: 2, low: 1 };
+          return priorityOrder[b.priority] - priorityOrder[a.priority];
+        } else if (sortCriteria === "alphabetical") {
+          return a.title.localeCompare(b.title);
+        } else {
+          return Number(b.completed) - Number(a.completed);
+        }
+      });
+  }, [tasks, searchTerm, sortCriteria]);
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <div className="max-w-2xl mx-auto mt-10 p-6 bg-white rounded-lg shadow-xl">
+      <h1 className="text-2xl font-bold mb-6 text-center">Todo App</h1>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      <div className="space-y-4 mb-6">
+        <Input
+          type="text"
+          placeholder="Add a new task"
+          value={newTask}
+          onChange={(e) => setNewTask(e.target.value)}
+          onKeyPress={(e) => e.key === "Enter" && addTask()}
+        />
+        <Textarea
+          placeholder="Add a description (optional)"
+          value={newTaskDescription}
+          onChange={(e) => setNewTaskDescription(e.target.value)}
+        />
+        <Button onClick={addTask} className="w-full">
+          <Plus className="h-4 w-4 mr-2" /> Add Task
+        </Button>
+      </div>
+
+      <div className="flex mb-4">
+        <div className="relative flex-grow mr-2">
+          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          <Input
+            type="text"
+            placeholder="Search tasks"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-8"
+          />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+        <Select
+          value={sortCriteria}
+          onValueChange={(value: "priority" | "alphabetical" | "completion") =>
+            setSortCriteria(value)
+          }
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="priority">Priority</SelectItem>
+            <SelectItem value="alphabetical">Alphabetical</SelectItem>
+            <SelectItem value="completion">Completion</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <motion.ul layout className="space-y-2">
+        <AnimatePresence>
+          {filteredAndSortedTasks.map((task) => (
+            <motion.li
+              key={task.id}
+              layout
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="bg-gray-100 rounded overflow-hidden"
+            >
+              <div className="flex items-center justify-between p-4">
+                <div className="flex items-center flex-grow mr-4">
+                  <Checkbox
+                    id={`task-${task.id}`}
+                    checked={task.completed}
+                    onCheckedChange={() => toggleTaskCompletion(task.id)}
+                    className="mr-2"
+                  />
+                  <label
+                    htmlFor={`task-${task.id}`}
+                    className={`flex-grow ${
+                      task.completed ? "line-through text-gray-500" : ""
+                    }`}
+                  >
+                    {task.title}
+                  </label>
+                </div>
+                <div className="flex items-center">
+                  <Select
+                    value={task.priority}
+                    onValueChange={(value: Priority) =>
+                      updateTaskPriority(task.id, value)
+                    }
+                  >
+                    <SelectTrigger className="w-[100px] mr-2">
+                      <SelectValue placeholder="Priority" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => deleteTask(task.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => toggleExpandTask(task.id)}
+                  >
+                    {expandedTask === task.id ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+              <AnimatePresence>
+                {expandedTask === task.id && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="px-4 pb-4"
+                  >
+                    <p className="text-sm text-gray-600">
+                      {task.description || "No description provided."}
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.li>
+          ))}
+        </AnimatePresence>
+      </motion.ul>
     </div>
   );
 }
