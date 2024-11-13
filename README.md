@@ -47,9 +47,7 @@ A responsive Todo application built with React, TypeScript, and Framer Motion, d
 - **React Environment**: The app assumes a React environment with TypeScript and all necessary dependencies (like Framer Motion and UI components) installed.
 - **Basic Web Support**: The app assumes users have a modern browser (e.g., Chrome, Firefox, Safari) that supports features like localStorage and dynamic components.
 
-## Screenshots
-
-### Main View:
+### Screenshots
 
 ![Screenshot 1](./public/pc1.png)
 
